@@ -95,7 +95,8 @@ $.extend(Fruit.prototype, {
 	
 		//Move inside stadium
 		this.position_x = this.stadium.position().left + this.position_x;
-		this.position_y = this.stadium.position().top + this.position_y;	
+		this.position_y = this.stadium.position().top + this.position_y;
+		
 		this.element.css({'top' : this.position_y, 'left' : this.position_x}); 
     }
 
