@@ -26,6 +26,8 @@ $.extend(Fruit.prototype, {
   // Create.
   init: function(options){
     
+
+	
     this.options = $.extend({
       width: 20
     }, options)
@@ -572,4 +574,8 @@ for (i=0; i < a.length; i++) {
 return a.join('');
 }
 
-
+function log(message) {
+	if(typeof(console)!='undefined') {
+		console.log(message);
+	}
+}
