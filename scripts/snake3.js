@@ -576,6 +576,6 @@ return a.join('');
 
 function log(message) {
 	if(typeof(console)!='undefined') {
-		console.log(message);
+		console.log('hey');
 	}
 }
