@@ -11,8 +11,8 @@ LEFT = 270;
 
 /* Fruit object */
 // We don't need all these variables. I'll take them out sooner or later.
-Fruit = function(options) {
-  this.init(options)
+Fruit = function(stadium, options) {
+  this.init(stadium, options)
 }
 $.extend(Fruit.prototype, {
   stadium: false,
@@ -24,15 +24,14 @@ $.extend(Fruit.prototype, {
   right: 0,
   
   // Create.
-  init: function(options){
+  init: function(stadium, options){
     
-
-	
     this.options = $.extend({
-      width: 20
-    }, options)
-    
-    this.stadium = $('#snake-stadium');
+      width: 20,
+    }, options);
+
+    this.stadium = stadium;
+
     this.element = $('#fruit');
     
     if(this.element.length == 0){
@@ -73,27 +72,33 @@ $.extend(Fruit.prototype, {
   },
   
   place: function(){
+	
     // Come up with a random number
-    this.position_x = Math.floor(Math.random() * $(window).width() - this.options['width']);
+    this.position_x = Math.floor(Math.random() * this.stadium.width() - this.options['width']);
     // Take off remainder
     this.position_x -= (this.position_x % this.options['width']);
 
     // Come up with a random number
-    this.position_y = Math.floor(Math.random() * $(window).height()) - this.options['width'];
+    this.position_y = Math.floor(Math.random() * this.stadium.height()) - this.options['width'];
     // Again, take off remainder
     this.position_y -= (this.position_y % this.options['width']);
-
+	
     // Don't let it place off the page!  
     if(
       this.position_y < 0 
       || this.position_x < 0 
-      || this.position_x > ($(window).width() - this.options['width']) 
-      || this.position_y > ($(window).width() - this.options['width'])
+      || this.position_x > (this.stadium.width() - this.options['width']) 
+      || this.position_y > (this.stadium.height() - this.options['width'])
     ){
       this.place();
     }else{
-      this.element.css({'top' : this.position_y, 'left' : this.position_x}); 
+	
+		//Move inside stadium
+		this.position_x = this.stadium.position().left + this.position_x;
+		this.position_y = this.stadium.position().top + this.position_y;	
+		this.element.css({'top' : this.position_y, 'left' : this.position_x}); 
     }
+
   }
 });
 
@@ -117,6 +122,7 @@ $.extend(Snake.prototype, {
   self: this,
   automatic: 0,
   score: 0,
+	fixed_stadium: false,
   
   // Let's get this party started!
   init: function(options){
@@ -133,21 +139,24 @@ $.extend(Snake.prototype, {
       skynet_only: false,
       human_only : false,
       width      : 20,
-      mouse_chasing: false
+      mouse_chasing: false,
+	  stadium_element: '#snake-stadium',
     }, options);
     
     this.width = this.options['width'];
 
+	this.doHTML();
+	
     // If it has no fruit, create one!
     if(typeof(fruit) == 'undefined' || fruit == false){
       this.fruit_object = $('<'+'div id="fruit"><'+'/div>');
       this.fruit_object.appendTo($("body"));
-      this.fruit = new Fruit({ height:this.height, width:this.width, mouse_chasing: this.options['mouse_chasing']});
+      this.fruit = new Fruit(this.stadium, { height:this.height, width:this.width, mouse_chasing: this.options['mouse_chasing']});
       fruit = this.fruit; 
     }else{
       this.fruit = fruit;
     }
-    
+
     if(this.width != this.fruit.options['width']){
       this.width = this.fruit.options['width']
     }
@@ -166,7 +175,7 @@ $.extend(Snake.prototype, {
     this.timeout    = this.options['timeout'];
     
     this.doSizes();
-    this.doHTML();
+    
     this.doColours();
     this.move();
     
@@ -228,11 +237,13 @@ $.extend(Snake.prototype, {
     this.head.css('left', this.position_y).css('top', this.position_x);
     this.head.attr('id', this.position_x+'x'+this.position_y);
     
-    this.stadium = $('#snake-stadium');
+    this.stadium = $(this.options['stadium_element']);
     if(this.stadium.length == 0){
-      this.stadium = $('<'+'div id="snake-stadium"><'+'/div>');
+      this.stadium = $('<'+'div id="'+this.options['stadium_element'].replace(/#/,'')+'"><'+'/div>');
       this.stadium.appendTo($("body"))
-    }
+    } else {
+		this.fixed_stadium=true;
+	}
     
     this.head.appendTo(this.stadium);
   },
@@ -367,16 +378,16 @@ $.extend(Snake.prototype, {
   // Random placement.
   randomizePlacement: function(force){
     if(this.options['starting_x'] == 'random' || force){
-      r = Math.floor(Math.random()* $(window).width());
+      r = Math.floor(Math.random()* this.stadium.width());
       r -= r % this.width;
-      this.options['starting_x'] = r; //this.width;
-      this.position_x = r;
+      this.position_x = this.stadium.position().left + r;
+		this.options['starting_x'] = this.position_x;
     }
     if(this.options['starting_y'] == 'random' || force){
-      r = Math.floor(Math.random()* $(window).height());
+      r = Math.floor(Math.random()* this.stadium.height());
       r -= r % this.width;
-      this.options['starting_y'] = r; //this.width;
-      this.position_y = r;
+      this.position_y = this.stadium.position().top + r;
+		this.options['starting_y'] = this.position_y;
     }
   },
 
@@ -439,19 +450,19 @@ $.extend(Snake.prototype, {
   // Fixing modulus-related overlaps
   fixOverlaps: function(){
     // Overlap
-    if (this.position_y < 0){                               // Off the top
-      this.position_y =  (this.screen_height - this.width); 
-      this.position_y -= (this.screen_height % this.width); // remainder if there is one
+    if (this.position_y < this.stadium.position().top){                               // Off the top
+      this.position_y =  this.stadium.position().top + this.screen_height - this.width; 
+      //this.position_y -= (this.screen_height % this.width); // remainder if there is one
     }
-    if (this.position_x < 0){                               // Off the left
-      this.position_x =  (this.screen_width - this.width);
+    if (this.position_x < this.stadium.position().left){                               // Off the left
+      this.position_x =  this.stadium.position().left + (this.screen_width - this.width);
       this.position_x -= (this.screen_width % this.width);  // remainder if there is one
     }
-    if (this.position_x > (this.screen_width - this.width)){  // Off the right
-      this.position_x = 0;
+    if (this.position_x > ((this.stadium.position().left + this.screen_width) - this.width)){  // Off the right
+      this.position_x = this.stadium.position().left;
     }
-    if (this.position_y >= (this.screen_height - this.width)){ // Off the bottom
-      this.position_y = 0;
+    if (this.position_y >= this.stadium.position().top + this.screen_height){ // Off the bottom
+      this.position_y = this.stadium.position().top;
     }
 
     if (this.position_x % this.width != 0){
@@ -478,8 +489,13 @@ $.extend(Snake.prototype, {
   
   // Screen sizes
   doSizes: function(){
-    this.screen_width   =   $(window).width();
-    this.screen_height  =   $(window).height();
+    
+	if(!this.fixed_stadium) {
+		this.stadium.css({top: 0, left: 0, width: $(window).width(), height: $(window).height()});
+	}
+	
+	this.screen_width   =   this.stadium.width();
+    this.screen_height  =   this.stadium.height();
     this.screen_width   -=  (this.screen_width % this.width);
     this.screen_height  -=  (this.screen_width % this.width);
   },
@@ -576,6 +592,6 @@ return a.join('');
 
 function log(message) {
 	if(typeof(console)!='undefined') {
-		console.log('hey');
+		console.log(message);
 	}
 }
